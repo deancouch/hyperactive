@@ -85,7 +85,6 @@ describe 'Crawler with server', ->
       ), 1000 # wait for all the calls to finish. Might be a better way to do it
 
 
-
 describe "Replacing getLinks", ->
 
   stubbedGetLinks = (->)
