@@ -6,10 +6,10 @@
   "license": "Copyright Tabcorp Pty Ltd 2014",
   "repository": {
     "type": "git",
-    "url": "https://github.com/TabDigital/hyperactive.git"
+    "url": "https://github.com/Tabcorp/hyperactive.git"
   },
   "bugs": {
-    "url": "https://github.com/TabDigital/hyperactive/issues"
+    "url": "https://github.com/Tabcorp/hyperactive/issues"
   },
   "main": "target/index.js",
   "scripts": {
@@ -19,17 +19,16 @@
   },
   "devDependencies": {
     "coffee-script": "~1.7.1",
-    "mocha": "~3.0.2",
-    "require-lint": "~1.0.0",
-    "sinon": "~1.10.3",
+    "mocha": "^5.2.0",
+    "require-lint": "^1.3.0",
     "should": "~4.0.4",
-    "irish-pub": "~0.1.0"
+    "sinon": "~1.10.3"
   },
   "dependencies": {
     "async": "~2.0.1",
     "js-match": "~1.0.6",
     "lodash": "^4.15.0",
-    "unirest": "^0.5.0",
+    "request": "^2.87.0",
     "uri-templates": "~0.2.0"
   }
 }

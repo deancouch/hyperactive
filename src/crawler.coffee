@@ -1,13 +1,23 @@
 _           = require 'lodash'
 async       = require 'async'
+request     = require 'request'
 templates   = require 'uri-templates'
 linkFinder  = require './link_finder'
 linkFilter  = require './link_filter'
-build       = require './request_builder'
+
+getRequest = (options, callback) ->
+  request.get options, (err, res, body) ->
+    callback {
+      status: res?.statusCode
+      ok: (res?.statusCode / 100 | 0) is 2
+      res: res
+      body: body
+    }
 
 DEFAULT_CONFIG = ->
   url: null
-  options: {}
+  options:
+    json: true
   templateValues: {}
   samplePercentage: 100
   getLinks: linkFinder.getLinks
@@ -17,8 +27,8 @@ DEFAULT_CONFIG = ->
 localItFunction = null
 config = DEFAULT_CONFIG()
 
-exports.getLinks = (res) ->
-  linkFilter.filter(config.getLinks(res.body), config.samplePercentage)
+exports.getLinks = (body) ->
+  linkFilter.filter(config.getLinks(body), config.samplePercentage)
 
 exports.setConfig = (userconfig) ->
   config = _.extend {}, DEFAULT_CONFIG(), userconfig
@@ -28,9 +38,8 @@ setIt = (it) ->
 
 createIt = (url, templateValues) =>
   localItFunction url, (done) =>
-    build.request(url, config.options).end(
-      (res) =>
-        exports.processResponse(url, res, templateValues, done)
+    getRequest(_.extend({url}, config.options), (res) ->
+      exports.processResponse(url, res, templateValues, done)
     )
 
 exports.createItWithResult = (url, err) ->
@@ -39,23 +48,24 @@ exports.createItWithResult = (url, err) ->
 
 exports.processResponse = (parent, res, templateValues, done) =>
   if not res.ok
-    err = "Bad status #{res.status} for url #{res.url}" unless config.recover(res)
+    err = "Bad status #{res.status} for url #{parent}" unless config.recover(res)
     return done(err)
   else
     try
-      if not validate parent, res
+      if not validate parent, res.body
         return done("Not a valid response: #{res.body}")
     catch err
       return done(err)
 
   describe "#{parent}", ->
-    requests = _.map exports.getLinks(res), (link) ->
+    requests = _.map exports.getLinks(res.body), (link) ->
       (callback) ->
         linkFilter.processLink link
-        expandedLink = expandUrl(link, templateValues)
-        build.request(expandedLink, config.options).end (res) =>
-          exports.processResponse expandedLink, res, templateValues, (err) ->
-            callback null, {err, link: expandedLink}
+        url = expandUrl(link, templateValues)
+        getRequest(_.extend({url}, config.options), (res) ->
+          exports.processResponse url, res, templateValues, (err) ->
+            callback null, {err, link: url}
+        )
 
     async.parallel requests, (err, results) ->
       results.forEach (result) ->
@@ -68,8 +78,8 @@ expandUrl = (url, values) ->
   else
     url
 
-validate = (url, res) ->
-  return config.validate(url, res.body)
+validate = (url, body) ->
+  return config.validate(url, body)
 
 exports.startCrawl = (config, it) ->
   exports.reset()

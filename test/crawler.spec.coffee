@@ -26,6 +26,7 @@ describe 'Crawler with server', ->
   config =
     url: "http://localhost:#{PORT}/{routeOne}"
     options:
+      json: true
       headers:
         Accept: 'application/json'
     templateValues:
@@ -35,6 +36,7 @@ describe 'Crawler with server', ->
   err_config =
     url: "http://localhost:#{PORT}/{routeOne}"
     options:
+      json: true
       headers:
         Accept: 'application/json'
     templateValues:
@@ -100,7 +102,7 @@ describe "Replacing getLinks", ->
 
   it 'should be able to replace getLinks function', ->
     crawler.setConfig { getLinks: stubbedGetLinks }
-    crawler.getLinks OK_RES
+    crawler.getLinks OK_RES_BODY
     sinon.assert.notCalled linkFinder.getLinks
     sinon.assert.calledOnce stubbedGetLinks
     assertCalledWith stubbedGetLinks, 0, [OK_RES_BODY]
@@ -127,36 +129,36 @@ describe 'Crawler', ->
     afterEach ->
       crawler.createItWithResult.restore()
 
-    it 'should crawl links that have not previously been crawled', ->
-      linkFinder.getLinks.onCall(0).returns ['a', 'b', 'c', 'b']
-      linkFinder.getLinks.onCall(1).returns ['d', 'e', 'c', 'b']
+    it 'should crawl links that have not previously been crawled', (done) ->
+      linkFinder.getLinks.onCall(0).returns ['http://localhost/a', 'http://localhost/b', 'http://localhost/c', 'http://localhost/b']
+      linkFinder.getLinks.onCall(1).returns ['http://localhost/d', 'http://localhost/e', 'http://localhost/c', 'http://localhost/b']
 
       crawler.processResponse 'parent', OK_RES, null, ->
       crawler.processResponse 'parent', OK_RES, null, ->
+        crawler.createItWithResult.callCount.should.eql 5
+        sinon.assert.calledWith crawler.createItWithResult, 'http://localhost/a'
+        sinon.assert.calledWith crawler.createItWithResult, 'http://localhost/b'
+        sinon.assert.calledWith crawler.createItWithResult, 'http://localhost/c'
+        sinon.assert.calledWith crawler.createItWithResult, 'http://localhost/d'
+        sinon.assert.calledWith crawler.createItWithResult, 'http://localhost/e'
+        done()
 
-      crawler.createItWithResult.callCount.should.eql 5
-      sinon.assert.calledWith crawler.createItWithResult, 'a'
-      sinon.assert.calledWith crawler.createItWithResult, 'b'
-      sinon.assert.calledWith crawler.createItWithResult, 'c'
-      sinon.assert.calledWith crawler.createItWithResult, 'd'
-      sinon.assert.calledWith crawler.createItWithResult, 'e'
-
-    it 'should crawl specified percentage of links', ->
+    it 'should crawl specified percentage of links', (done) ->
       crawler.setConfig {samplePercentage: 75}
-      linkFinder.getLinks.onCall(0).returns ['a', 'b', 'c', 'd']
+      linkFinder.getLinks.onCall(0).returns ['http://localhost/a', 'http://localhost/b', 'http://localhost/c', 'http://localhost/d']
 
       crawler.processResponse 'parent', OK_RES, null, ->
+        crawler.createItWithResult.callCount.should.eql 3
+        done()
 
-      crawler.createItWithResult.callCount.should.eql 3
-
-    it 'should crawl links with uri template', ->
-      linkFinder.getLinks.onCall(0).returns ['/{value1}?query={value2}{&value3}', 'b']
+    it 'should crawl links with uri template', (done) ->
+      linkFinder.getLinks.onCall(0).returns ['http://localhost/{value1}?query={value2}{&value3}', 'http://localhost/b']
 
       crawler.processResponse 'parent', OK_RES, {value1: 'one', value2: 'two'}, ->
-
-      crawler.createItWithResult.callCount.should.eql 2
-      sinon.assert.calledWith crawler.createItWithResult, '/one?query=two'
-      sinon.assert.calledWith crawler.createItWithResult,  'b'
+        crawler.createItWithResult.callCount.should.eql 2
+        sinon.assert.calledWith crawler.createItWithResult, 'http://localhost/one?query=two'
+        sinon.assert.calledWith crawler.createItWithResult,  'http://localhost/b'
+        done()
 
     it 'by default should error from a bad response', (done) ->
       crawler.processResponse 'parent', BAD_RES, {}, (err) ->
