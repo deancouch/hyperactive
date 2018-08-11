@@ -33,12 +33,19 @@ exports.getLinks = (body) ->
 exports.setConfig = (userconfig) ->
   config = _.extend {}, DEFAULT_CONFIG(), userconfig
 
+exports.rewriteUrl = (url, rewriteUrls) ->
+  _.forEach(rewriteUrls, (v, k) ->
+    url = url.replace(k, v)
+  )
+  url
+
+
 setIt = (it) ->
   localItFunction = it
 
 createIt = (url, templateValues) =>
   localItFunction url, (done) =>
-    getRequest(_.extend({url}, config.options), (res) ->
+    getRequest(_.extend({url: exports.rewriteUrl(url, config.rewriteUrls)}, config.options), (res) ->
       exports.processResponse(url, res, templateValues, done)
     )
 
@@ -62,7 +69,7 @@ exports.processResponse = (parent, res, templateValues, done) =>
       (callback) ->
         linkFilter.processLink link
         url = expandUrl(link, templateValues)
-        getRequest(_.extend({url}, config.options), (res) ->
+        getRequest(_.extend({url: exports.rewriteUrl(url, config.rewriteUrls)}, config.options), (res) ->
           exports.processResponse url, res, templateValues, (err) ->
             callback null, {err, link: url}
         )
